@@ -38,7 +38,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"handbuch" | "rezepte" | "produktion" | "todo" | "dienstplan" | "mitarbeiter">("handbuch");
 
   // State managed globally and synced with localStorage for persistent kiosk utilization
-  const [articles, setArticles] = useState<GuideArticle[]>(initialArticles);
+  const [articles, setArticles] = useState<GuideArticle[]>(() => {
+    const cached = localStorage.getItem("luigi_articles");
+    return cached ? JSON.parse(cached) : initialArticles;
+  });
   
   const [fruehChecklist, setFruehChecklist] = useState<ChecklistItem[]>(() => {
     const cached = localStorage.getItem("luigi_frueh_checklist");
@@ -88,6 +91,10 @@ export default function App() {
   });
 
   // Syncing modifications with LocalStorage
+  useEffect(() => {
+    localStorage.setItem("luigi_articles", JSON.stringify(articles));
+  }, [articles]);
+
   useEffect(() => {
     localStorage.setItem("luigi_team_members", JSON.stringify(team));
   }, [team]);
@@ -239,6 +246,7 @@ export default function App() {
               {activeTab === "handbuch" && (
                 <HandbuchModule
                   articles={articles}
+                  setArticles={setArticles}
                   fruehChecklist={fruehChecklist}
                   setFruehChecklist={setFruehChecklist}
                   spaetChecklist={spaetChecklist}

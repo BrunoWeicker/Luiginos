@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from "motion/react";
 
 interface HandbuchModuleProps {
   articles: GuideArticle[];
+  setArticles: React.Dispatch<React.SetStateAction<GuideArticle[]>>;
   fruehChecklist: ChecklistItem[];
   setFruehChecklist: React.Dispatch<React.SetStateAction<ChecklistItem[]>>;
   spaetChecklist: ChecklistItem[];
@@ -29,6 +30,7 @@ interface HandbuchModuleProps {
 
 export default function HandbuchModule({
   articles,
+  setArticles,
   fruehChecklist,
   setFruehChecklist,
   spaetChecklist,
@@ -103,6 +105,39 @@ export default function HandbuchModule({
       setFruehChecklist(list);
     } else {
       setSpaetChecklist(list);
+    }
+  };
+
+  // State for editing wiki articles
+  const [isEditingWiki, setIsEditingWiki] = useState(false);
+  const [newFaqQuestion, setNewFaqQuestion] = useState("");
+  const [newFaqAnswer, setNewFaqAnswer] = useState("");
+  const [newFaqCategory, setNewFaqCategory] = useState<GuideArticle["category"]>("allgemein");
+  const [newFaqTags, setNewFaqTags] = useState("");
+
+  const handleAddFaq = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFaqQuestion.trim() || !newFaqAnswer.trim()) return;
+
+    const newArticle: GuideArticle = {
+      id: `faq-${Date.now()}`,
+      category: newFaqCategory,
+      title: newFaqQuestion.trim().substring(0, 40) + "...",
+      question: newFaqQuestion.trim(),
+      answer: newFaqAnswer.trim(),
+      tags: newFaqTags.split(",").map(t => t.trim()).filter(Boolean)
+    };
+
+    setArticles((prev) => [newArticle, ...prev]);
+    setNewFaqQuestion("");
+    setNewFaqAnswer("");
+    setNewFaqCategory("allgemein");
+    setNewFaqTags("");
+  };
+
+  const handleDeleteFaq = (id: string) => {
+    if (window.confirm("Sind Sie sicher, dass Sie diesen Eintrag aus der Wissensdatenbank löschen möchten?")) {
+      setArticles((prev) => prev.filter((art) => art.id !== id));
     }
   };
 
@@ -200,28 +235,42 @@ export default function HandbuchModule({
               />
             </div>
 
-            <div className="flex flex-wrap gap-2 text-sm" id="wiki-category-filter">
-              {[
-                { value: "all", label: "Alle Rubriken" },
-                { value: "prozesse", label: "Prozesse & Standöffnung" },
-                { value: "hygiene", label: "Hygiene & Einlagerung" },
-                { value: "geraete", label: "Geräte & Pflege" },
-                { value: "allgemein", label: "Allgemein" },
-                { value: "notfall", label: "Notfallanweisungen" }
-              ].map((cat) => (
-                <button
-                  key={cat.value}
-                  id={`cat-btn-${cat.value}`}
-                  onClick={() => setSelectedCategory(cat.value)}
-                  className={`px-4 py-2 rounded-lg font-sans transition-all border ${
-                    selectedCategory === cat.value
-                      ? "bg-emerald-800 text-white border-emerald-800"
-                      : "bg-zinc-50 hover:bg-zinc-100 text-zinc-600 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
+            <div className="flex flex-wrap gap-2 text-sm justify-between items-center w-full" id="wiki-category-filter">
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: "all", label: "Alle Rubriken" },
+                  { value: "prozesse", label: "Prozesse & Standöffnung" },
+                  { value: "hygiene", label: "Hygiene & Einlagerung" },
+                  { value: "geraete", label: "Geräte & Pflege" },
+                  { value: "allgemein", label: "Allgemein" },
+                  { value: "notfall", label: "Notfallanweisungen" }
+                ].map((cat) => (
+                  <button
+                    key={cat.value}
+                    id={`cat-btn-${cat.value}`}
+                    onClick={() => setSelectedCategory(cat.value)}
+                    className={`px-4 py-2 rounded-lg font-sans transition-all border ${
+                      selectedCategory === cat.value
+                        ? "bg-emerald-800 text-white border-emerald-800"
+                        : "bg-zinc-50 hover:bg-zinc-100 text-zinc-650 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingWiki(!isEditingWiki)}
+                className={`px-4 py-2 rounded-lg font-sans font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  isEditingWiki
+                    ? "bg-amber-600 hover:bg-amber-700 text-white"
+                    : "bg-zinc-100 dark:bg-zinc-850 text-zinc-650 dark:text-zinc-350 hover:bg-zinc-200"
+                }`}
+              >
+                <FileEdit className="h-3.5 w-3.5" />
+                {isEditingWiki ? "Bearbeiten beenden" : "Wissensdatenbank bearbeiten"}
+              </button>
             </div>
           </div>
 
@@ -237,6 +286,71 @@ export default function HandbuchModule({
               </p>
             </div>
           </div>
+
+          {isEditingWiki && (
+            <form onSubmit={handleAddFaq} className="bg-zinc-50 dark:bg-zinc-950 p-5 border border-zinc-200 dark:border-zinc-800 rounded-xl space-y-4 animate-fadeIn" id="add-faq-form">
+              <p className="font-sans font-bold text-[10px] text-zinc-500 flex items-center gap-1.5 uppercase tracking-wider font-mono">
+                <Plus className="h-4 w-4 text-emerald-800" /> Neuen Wissensdatenbank-Eintrag hinzufügen
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-zinc-450 uppercase tracking-wider font-mono">Rubrik *</label>
+                  <select
+                    value={newFaqCategory}
+                    onChange={(e) => setNewFaqCategory(e.target.value as any)}
+                    className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-xs rounded-lg focus:outline-none focus:border-emerald-800 text-zinc-800 dark:text-zinc-100 font-sans"
+                  >
+                    <option value="prozesse">Prozesse & Standöffnung</option>
+                    <option value="hygiene">Hygiene & Einlagerung</option>
+                    <option value="geraete">Geräte & Pflege</option>
+                    <option value="allgemein">Allgemein</option>
+                    <option value="notfall">Notfallanweisungen</option>
+                  </select>
+                </div>
+                <div className="space-y-1 md:col-span-2">
+                  <label className="text-[9px] font-bold text-zinc-450 uppercase tracking-wider font-mono">Tags (kommagetrennt)</label>
+                  <input
+                    type="text"
+                    placeholder="z.B. Kasse, Abrechnung, Abend"
+                    value={newFaqTags}
+                    onChange={(e) => setNewFaqTags(e.target.value)}
+                    className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-xs rounded-lg focus:outline-none focus:border-emerald-800 text-zinc-800 dark:text-zinc-100 font-sans"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-zinc-450 uppercase tracking-wider font-mono">Frage *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="z.B. Wie wird die Kasse am Abend abgerechnet?"
+                  value={newFaqQuestion}
+                  onChange={(e) => setNewFaqQuestion(e.target.value)}
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-xs rounded-lg focus:outline-none focus:border-emerald-800 text-zinc-800 dark:text-zinc-100 font-sans font-semibold"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-zinc-450 uppercase tracking-wider font-mono">Antwort *</label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Gib hier die genaue Beschreibung / Anweisung ein..."
+                  value={newFaqAnswer}
+                  onChange={(e) => setNewFaqAnswer(e.target.value)}
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-xs rounded-lg focus:outline-none focus:border-emerald-800 text-zinc-800 dark:text-zinc-100 font-sans"
+                />
+              </div>
+              <div className="flex justify-end pt-1">
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-850 hover:bg-emerald-800 text-white font-sans font-bold text-xs rounded-lg transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                  Eintrag speichern
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Articles list */}
           <div className="grid grid-cols-1 gap-4" id="articles-list">
@@ -265,12 +379,24 @@ export default function HandbuchModule({
                       >
                         {art.category}
                       </span>
-                      <div className="flex gap-1.5" id={`article-tags-${art.id}`}>
-                        {art.tags.map((tag) => (
-                          <span key={tag} className="text-xs text-zinc-400 font-sans">
-                            #{tag}
-                          </span>
-                        ))}
+                      <div className="flex items-center gap-3" id={`article-meta-actions-${art.id}`}>
+                        <div className="flex gap-1.5" id={`article-tags-${art.id}`}>
+                          {art.tags.map((tag) => (
+                            <span key={tag} className="text-xs text-zinc-400 font-sans">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                        {isEditingWiki && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteFaq(art.id)}
+                            className="p-1.5 text-red-650 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-700 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-red-200 dark:hover:border-red-900"
+                            title="Eintrag löschen"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
