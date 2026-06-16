@@ -1,0 +1,6 @@
+{
+  "name": "Luiginos",
+  "description": "Zentrales Wissens- und Organisationstool für den Marktstand Luiginos am Münchner Viktualienmarkt.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
